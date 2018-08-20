@@ -1,0 +1,158 @@
+---
+apiVersion: "apps/v1beta2"
+kind: Deployment
+metadata:
+  name: "akka-cluster-kubernetes-v0-1-0-snapshot"
+  labels:
+    appName: "akka-cluster-kubernetes"
+    appNameVersion: "akka-cluster-kubernetes-v0-1-0-snapshot"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      appNameVersion: "akka-cluster-kubernetes-v0-1-0-snapshot"
+  template:
+    metadata:
+      labels:
+        appName: "akka-cluster-kubernetes"
+        appNameVersion: "akka-cluster-kubernetes-v0-1-0-snapshot"
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: "akka-cluster-kubernetes"
+          image: "akka-cluster-kubernetes:0.1.0-SNAPSHOT"
+          imagePullPolicy: IfNotPresent
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: 8080
+          env:
+            - name: "RP_APP_NAME"
+              value: "akka-cluster-kubernetes"
+            - name: "RP_APP_TYPE"
+              value: basic
+            - name: "RP_APP_VERSION"
+              value: "0.1.0-SNAPSHOT"
+            - name: "RP_ENDPOINTS"
+              value: "MANAGEMENT,REMOTING"
+            - name: "RP_ENDPOINTS_COUNT"
+              value: "2"
+            - name: "RP_ENDPOINT_0_BIND_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_0_BIND_PORT"
+              value: "8558"
+            - name: "RP_ENDPOINT_0_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_0_PORT"
+              value: "8558"
+            - name: "RP_ENDPOINT_1_BIND_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_1_BIND_PORT"
+              value: "2552"
+            - name: "RP_ENDPOINT_1_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_1_PORT"
+              value: "2552"
+            - name: "RP_ENDPOINT_MANAGEMENT_BIND_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_MANAGEMENT_BIND_PORT"
+              value: "8558"
+            - name: "RP_ENDPOINT_MANAGEMENT_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_MANAGEMENT_PORT"
+              value: "8558"
+            - name: "RP_ENDPOINT_REMOTING_BIND_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_REMOTING_BIND_PORT"
+              value: "2552"
+            - name: "RP_ENDPOINT_REMOTING_HOST"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_ENDPOINT_REMOTING_PORT"
+              value: "2552"
+            - name: "RP_JAVA_OPTS"
+              value: "-Dconfig.resource=rp-application.conf"
+            - name: "RP_KUBERNETES_POD_IP"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "RP_KUBERNETES_POD_NAME"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.name"
+            - name: "RP_MODULES"
+              value: common
+            - name: "RP_NAMESPACE"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.namespace"
+            - name: "RP_PLATFORM"
+              value: kubernetes
+          ports:
+            - containerPort: 8558
+              name: management
+            - containerPort: 2552
+              name: remoting
+          volumeMounts: []
+          command:
+            - "/rp-start"
+          args:
+            - "bin/akka-cluster-kubernetes"
+      volumes: []
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    appName: "akka-cluster-kubernetes"
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  name: "akka-cluster-kubernetes"
+spec:
+  ports:
+    - name: management
+      port: 8558
+      protocol: TCP
+      targetPort: 8558
+    - name: remoting
+      port: 2552
+      protocol: TCP
+      targetPort: 2552
+  selector:
+    appName: "akka-cluster-kubernetes"
+  clusterIP: None
+  publishNotReadyAddresses: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    appName: "akka-cluster-kubernetes"
+  name: "akka-cluster-kubernetes-public"
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080 
+  selector:
+    appName: "akka-cluster-kubernetes"
